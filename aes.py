@@ -58,6 +58,7 @@ class aes_object():
         # [ 0 0 1 1 1 1 1 0 ]
         # [ 0 0 0 1 1 1 1 1 ]
         self.sub_bytes_array = [143, 199, 227, 241, 248, 124, 62, 31]
+        self.sbox = {}
 
         # The state array is 4x4, each index holding a single character:
         # [[ 0, 0, 0, 0]
@@ -98,7 +99,6 @@ class aes_object():
                     self.mix_columns()
                     self.add_round_key()
                     print ''
-                    self.print_state_array()
 
     def get_input_from_file(self, work_file):
         """Reads in 16 bytes of input from a normal text file."""
@@ -119,20 +119,23 @@ class aes_object():
         """Reads in 16 bytes of input from a text file with hex values."""
         file_ended = False
         line = hex_file.readline()
+        if line == '':
+            file_ended = True
         hex_list = line.split()
         for index in range(len(hex_list)):
             row = index % 4
             column = index / 4
             self.state_array[row][column] = hex_list[index]
         self.print_state_array()
+        return not file_ended
 
     def sub_bytes(self):
         """AES SubBytes() transformation"""
         sbox_calc_list = []
+        print "Before sub_bytes()"
+        self.print_state_array()
         for row in range(4):
             for column in range(4): 
-                print "Before sub_bytes(", row, column, ")"
-                self.print_state_array()
                 char = int(self.state_array[row][column], 16)
                 print 'first char in decimal:', char
                 # don't need this for some reason
@@ -154,6 +157,10 @@ class aes_object():
                     while len(bit_string) < 8:
                         bit_string = '0' + bit_string
                     sbox_calc_list.append(bit_string)
+                    print "sub bytenum", self.cut_prefix_string(bin(number),8)
+                    print "char bytes ", self.cut_prefix_string(bin(char), 8)
+                    print "bit string:", bit_string
+                    print ''
                 print "sbox_calc_list: ", sbox_calc_list
                 # after this for loop, sbox_calc_list should look like this:
                 # [1,
@@ -169,16 +176,28 @@ class aes_object():
                     for sbox_char in range(8):
                         final_bit = final_bit ^ int(sbox_calc_list[sbox_string][sbox_char])
                     sbox_calc_list[sbox_string] = final_bit
+                print 'final sbox calc list:', sbox_calc_list
                 # After this loop, final_byte should be a string:
                 # '00101000'
+                final_bit = 0
                 for final_bit in range(8):
                     final_byte = str(sbox_calc_list[final_bit]) + final_byte
+                # turn the final_byte into a string, xor it with 0x63, and 
+                # then turn it back into hex
+                print 'final_byte before xoring with 0x63:', final_byte, int(final_byte, 2)
+                print final_byte
+                print self.cut_prefix_string(bin(99), 8)
                 final_byte = self.cut_prefix_string(hex(int(final_byte, 2)), 2)
-                print 'final byte in hex:', final_byte
+                final_byte = int(final_byte, 16) ^ 99
+                final_byte = self.cut_prefix_string(hex(final_byte), 2)
+                print 'final byte:', final_byte, self.cut_prefix_string(bin(int(final_byte, 16)), 8)
                 self.state_array[row][column] = final_byte
                 print "After sub_bytes(", row, column, ")"
                 self.print_state_array()
                 print ''
+
+    def get_sbox(self):
+        """Gets the s-box from a text file"""
 
     def shift_rows(self):
         """AES ShiftRows() Transformation"""
@@ -215,6 +234,6 @@ class aes_object():
 
 if __name__ == '__main__':
     x = aes_object(128)
-    x.write_hex_file('helloworld.txt')
+    # x.write_hex_file('helloworld.txt')
     x.print_delimiter()
     x.write_encoded_file('hexfile.txt')
