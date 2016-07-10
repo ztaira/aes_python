@@ -60,7 +60,7 @@ class aes_object():
         self.sub_bytes_array = [143, 199, 227, 241, 248, 124, 62, 31]
         self.sbox = {}
 
-        # The state array is 4x4, each index holding a single character:
+        # The state array is 4x4, each index holding a single hex character:
         # [[ 0, 0, 0, 0]
         #  [ 0, 0, 0, 0]
         #  [ 0, 0, 0, 0]
@@ -89,6 +89,7 @@ class aes_object():
 
     def write_encoded_file(self, file_name):
         """Encodes a file using AES."""
+        self.get_sbox()
         with open(str(file_name), 'r') as work_file:
             with open('encodedfile.txt', 'w') as encoded_file:
                 self.print_state_array()
@@ -136,68 +137,29 @@ class aes_object():
         self.print_state_array()
         for row in range(4):
             for column in range(4): 
-                char = int(self.state_array[row][column], 16)
-                print 'first char in decimal:', char
-                # don't need this for some reason
-                # char = ~char
-                sbox_calc_list = []
-                final_bit = 0
-                final_byte = ''
-                # after this for loop, sbox_calc_list should look like this:
-                # ['11110000'
-                #  '10101010'
-                #  '10111101'
-                #  '00011010'
-                #  '10010101'
-                #  '10100100'
-                #  '10000110'
-                #  '01000111']
-                for number in self.sub_bytes_array:
-                    bit_string = bin(char & number)[2:]
-                    while len(bit_string) < 8:
-                        bit_string = '0' + bit_string
-                    sbox_calc_list.append(bit_string)
-                    print "sub bytenum", self.cut_prefix_string(bin(number),8)
-                    print "char bytes ", self.cut_prefix_string(bin(char), 8)
-                    print "bit string:", bit_string
-                    print ''
-                print "sbox_calc_list: ", sbox_calc_list
-                # after this for loop, sbox_calc_list should look like this:
-                # [1,
-                #  1,
-                #  1,
-                #  0,
-                #  1,
-                #  1,
-                #  1,
-                #  0]
-                for sbox_string in range(8):
-                    final_bit = 0
-                    for sbox_char in range(8):
-                        final_bit = final_bit ^ int(sbox_calc_list[sbox_string][sbox_char])
-                    sbox_calc_list[sbox_string] = final_bit
-                print 'final sbox calc list:', sbox_calc_list
-                # After this loop, final_byte should be a string:
-                # '00101000'
-                final_bit = 0
-                for final_bit in range(8):
-                    final_byte = str(sbox_calc_list[final_bit]) + final_byte
-                # turn the final_byte into a string, xor it with 0x63, and 
-                # then turn it back into hex
-                print 'final_byte before xoring with 0x63:', final_byte, int(final_byte, 2)
-                print final_byte
-                print self.cut_prefix_string(bin(99), 8)
-                final_byte = self.cut_prefix_string(hex(int(final_byte, 2)), 2)
-                final_byte = int(final_byte, 16) ^ 99
-                final_byte = self.cut_prefix_string(hex(final_byte), 2)
-                print 'final byte:', final_byte, self.cut_prefix_string(bin(int(final_byte, 16)), 8)
-                self.state_array[row][column] = final_byte
-                print "After sub_bytes(", row, column, ")"
-                self.print_state_array()
-                print ''
+                num = self.state_array[row][column]
+                self.state_array[row][column] = self.sbox[num[0:1]][num[1:2]]
+        print "After sub_bytes()"
+        self.print_state_array()
+        print ""
 
     def get_sbox(self):
-        """Gets the s-box from a text file"""
+        """Gets the s-box from a text file and puts it in a dict"""
+        with open('sbox.txt', 'r') as sbox_file:
+            lines = sbox_file.read().splitlines()  
+        linenum = 0
+        for line in lines: 
+            splitline = line.split()
+            temp_dict = {}
+            for x in range(16):
+                temp_dict[hex(x)[2:]] = splitline[x]
+            self.sbox[hex(linenum)[2:]] = temp_dict
+            linenum += 1
+        # For testing if the sbox is correct
+        # for x in range(16):
+            # for y in range(16):
+                # print self.sbox[hex(x)[2:]][hex(y)[2:]],
+            # print ''
 
     def shift_rows(self):
         """AES ShiftRows() Transformation"""
