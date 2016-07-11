@@ -48,17 +48,15 @@ class aes_object():
                       " bits"
             raise ValueError(message)
 
-        # the following byte array represents this:
-        # [ 1 0 0 0 1 1 1 1 ]
-        # [ 1 1 0 0 0 1 1 1 ]
-        # [ 1 1 1 0 0 0 1 1 ]
-        # [ 1 1 1 1 0 0 0 1 ]
-        # [ 1 1 1 1 1 0 0 0 ]
-        # [ 0 1 1 1 1 1 0 0 ]
-        # [ 0 0 1 1 1 1 1 0 ]
-        # [ 0 0 0 1 1 1 1 1 ]
-        self.sub_bytes_array = [143, 199, 227, 241, 248, 124, 62, 31]
+        # This array is the sbox, which gets populated via get_sbox()
         self.sbox = {}
+        
+        # This array is to be used for mix_columns()
+        self.mix_columns_array = [
+            [2, 3, 1, 1],
+            [1, 2, 3, 1],
+            [1, 1, 2, 3],
+            [3, 1, 1, 2]]
 
         # The state array is 4x4, each index holding a single hex character:
         # [[ 0, 0, 0, 0]
@@ -66,7 +64,6 @@ class aes_object():
         #  [ 0, 0, 0, 0]
         #  [ 0, 0, 0, 0]]
         self.state_array = [['']*4, ['']*4, ['']*4, ['']*4]
-        print self.state_array
 
     def write_hex_file(self, file_name):
         """
@@ -99,6 +96,7 @@ class aes_object():
                     self.shift_rows()
                     self.mix_columns()
                     self.add_round_key()
+                    self.print_state_array()
                     print ''
 
     def get_input_from_file(self, work_file):
@@ -127,14 +125,14 @@ class aes_object():
             row = index % 4
             column = index / 4
             self.state_array[row][column] = hex_list[index]
+        print "Read in the following values from hex file:"
         self.print_state_array()
+        print ''
         return not file_ended
 
     def sub_bytes(self):
         """AES SubBytes() transformation"""
         sbox_calc_list = []
-        print "Before sub_bytes()"
-        self.print_state_array()
         for row in range(4):
             for column in range(4): 
                 num = self.state_array[row][column]
@@ -163,11 +161,53 @@ class aes_object():
 
     def shift_rows(self):
         """AES ShiftRows() Transformation"""
-        pass
+        for row_num in range(4):
+            for shift in range(row_num):
+                shift_num = self.state_array[row_num].pop(0)
+                self.state_array[row_num].append(shift_num)
+        print "After shift_rows():"
+        self.print_state_array()
     
     def mix_columns(self):
         """AES MixColumns() Transformation"""
-        pass
+        for row in range(4):
+            for column in range(4):
+                self.state_array[row][column] = int(self.state_array[row][column], 16)
+        for column in range(4):
+            # puts a column of the state array into mix_row
+            mix_row = []
+            for row in range(4):
+                mix_row.append(self.state_array[row][column])
+            # does math to calculate result for each box
+            for row in range(4):
+                self.mix_column(mix_row, column, row)
+
+    def mix_column(self, mix_row, column, row):
+        """Mixes a single column"""
+        temp_array = self.mix_columns_array[row]
+        print temp_array, column, row
+        print mix_row
+        results_list = []
+        result = 0
+        for x in range(4):
+            if temp_array[x] == 1:
+                results_list.append(mix_row[x])
+            elif temp_array[x] == 2:
+                if self.cut_prefix_string(bin(mix_row[x]), 8)[0:1] == '1':
+                    results_list.append(((mix_row[x] << 1) - 256) ^ 27)
+                else:
+                    results_list.append((mix_row[x] << 1))
+            elif temp_array[x] == 3: 
+                if self.cut_prefix_string(bin(mix_row[x]), 8)[0:1] == '1':
+                    results_list.append((((mix_row[x] << 1) - 256) ^ 27) ^ mix_row[x])
+                else:
+                    results_list.append((mix_row[x] << 1) ^ mix_row[x])
+        # for x in range(4):
+            # print self.cut_prefix_string(bin(results_list[x]), 8)
+        result = results_list[0] ^ results_list[1] ^ results_list[2] ^ results_list[3]
+        # print hex(result), result
+        print ''
+        self.state_array[row][column] = self.cut_prefix_string(hex(result), 4)
     
     def add_round_key(self):
         """AES AddRoundKey() Transformation"""
