@@ -21,6 +21,7 @@ class aes_object():
         # cipher key length is 128, 192, or 256 bits
         # aka 16, 24, or 32 bytes
         self.cipher_key = [int(input_cipher_key[i:i+2], 16) for i in range(0, len(input_cipher_key), 2)]
+        self.expanded_key = []
         self.cipher_key_length_bits = len(self.cipher_key) * 8
         self.cipher_key_length_bytes = len(self.cipher_key)
 
@@ -100,12 +101,23 @@ class aes_object():
             with open('encodedfile.txt', 'w') as encoded_file:
                 # while self.get_input_from_file(work_file):
                 while self.get_input_from_hex_file(work_file):
+                    for roundnum in range(self.Nr):
+                        if roundnum == 0:
+                            self.add_round_key(roundnum)
+                        else:
+                            self.sub_bytes()
+                            self.shift_rows()
+                            self.mix_columns()
+                            self.add_round_key(roundnum)
+                            print ''
                     self.sub_bytes()
                     self.shift_rows()
-                    self.mix_columns()
-                    self.add_round_key()
-                    print ''
-                    self.print_delimiter
+                    self.add_round_key(roundnum+1)
+                    for x in range(4):
+                        for y in range(4):
+                            z = self.state_array[y][x]
+                            encoded_file.write(self.cut_prefix_string(hex(z), 2))
+                    encoded_file.write('\n')
 
     def get_input_from_file(self, work_file):
         """Reads in 16 bytes of input from a normal text file."""
@@ -284,9 +296,14 @@ class aes_object():
         # print hex(result), result
         self.state_array[row][column] = result
     
-    def add_round_key(self):
+    def add_round_key(self, roundnum):
         """AES AddRoundKey() Transformation"""
-        pass
+        key_array = self.expanded_key[16*roundnum:(16*roundnum)+16]
+        for column in range(4):
+            for row in range(4):
+                self.state_array[row][column] = self.state_array[row][column] ^ key_array.pop(0)
+        print "After add_round_key:"
+        self.print_state_array()
 
     def print_state_array(self):
         """Prints out the state array"""
@@ -318,11 +335,18 @@ class aes_object():
         print '# ==============================================================================================================================================='
 
 if __name__ == '__main__':
+    # Checks from NIST whitepaper:
+    # Appendix B:
     # x = aes_object('2b7e151628aed2a6abf7158809cf4f3c')
+    # Appendix C:
+    x = aes_object('000102030405060708090a0b0c0d0e0f')
+    # Checks from keyschedule.html aka http://www.samiam.org/key-schedule.html
     # x = aes_object('00000000000000000000000000000000')
     # x = aes_object('ffffffffffffffffffffffffffffffff')
     # x = aes_object('000102030405060708090a0b0c0d0e0f')
-    x = aes_object('6920e299a5202a6d656e636869746f2a')
+    # x = aes_object('6920e299a5202a6d656e636869746f2a')
     # x.write_hex_file('helloworld.txt')
     x.print_delimiter()
-    x.write_encoded_file('hexfile.txt')
+    # Checks from NIST whitepaper:
+    # x.write_encoded_file('appendixb.txt')
+    x.write_encoded_file('appendixc.txt')
