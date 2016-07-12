@@ -5,7 +5,7 @@ Hack-A-Week 1: An attempt at implementing the AES in python, for funsies.
 Don't use this for anything serious.
 
 ## Features:
-- Based on [NIST whitepaper](http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf)
+- Based on [NIST whitepaper - FIPS 197](http://csrc.nist.gov/publications/fips/fips197/fips-197.pdf)
 - Satisfies all NIST checks for 128-bit key expansion and text encryption
 - Additional tests are included in the webpage in the tests.dir
 
