@@ -21,7 +21,7 @@ Don't use this for anything serious.
 - Implement the AES for 192 or 256-bit keys
 
 ## Reasons for not doing things:
-- I reach the end of my self-imposed time limit
+- I reached the end of my self-imposed time limit
 
 ### Included files:
 ```
